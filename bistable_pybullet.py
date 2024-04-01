@@ -69,7 +69,7 @@ def steer_map(x, max_steer):
    return x*max_steer
 
 # Set the target angle and the gains
-target_angle = 0.295 # 0.29 is the angle to make the robot stay at rest
+init_angle = 0.295 # 0.29 is the angle to make the robot stay at rest
 #steer = 2
 kp = 5
 ki = 0.2
@@ -98,7 +98,7 @@ while True:
                yaw = yaw * 180 / 3.14159265359
 
                # print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
-               target_angle = velocity_map(-left_y, 8)
+               target_angle = velocity_map(-left_y, 8) - init_angle
                print(f"error: {target_angle - roll}")
 
                # Control the wheel velocities using PID control
