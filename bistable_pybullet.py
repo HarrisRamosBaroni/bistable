@@ -2,12 +2,19 @@ import os
 import pybullet as p
 import pybullet_data
 import time
-from approxeng.input.selectbinder import ControllerResource
+import curses
+
+# Initialize curses
+stdscr = curses.initscr()
+curses.cbreak()
+stdscr.keypad(True)
+# Set getch to non-blocking mode
+stdscr.nodelay(True)
 
 p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-urdf_file = "urdf/BiStable.urdf"
+urdf_file = "BiStable.urdf"
 
 # Check if the URDF file exists before trying to load it
 if os.path.isfile(urdf_file):
@@ -17,7 +24,6 @@ else:
 
 # Load a plane
 plane_id = p.loadURDF("plane.urdf")
-
 
 # Set gravity
 p.setGravity(0, 0, -9.81)
@@ -37,6 +43,7 @@ for i in range(num_joints):
        left_wheel_joint_index = i
    elif joint_info[1].decode() == "Revolute 20":
        right_wheel_joint_index = i
+
 
 # Function to control the velocity of the left wheel
 def set_left_wheel_velocity(velocity):
@@ -69,8 +76,7 @@ def steer_map(x, max_steer):
    return x*max_steer
 
 # Set the target angle and the gains
-init_angle = 0.295 # 0.29 is the angle to make the robot stay at rest
-#steer = 2
+init_angle = -0.295 # 0.295 is the angle to make the robot stay at rest
 kp = 5
 ki = 0.2
 kd = 0.2
@@ -81,44 +87,48 @@ integral = 0
 
 p.resetDebugVisualizerCamera(1.0, 30, -40, [0.0, -0.0, -0.0])
 
-while True:
-
-   try:
-       with ControllerResource() as joystick:
-           print('Found a joystick and connected')
-           while joystick.connected:
-               left_x = joystick['lx']
-               left_y = joystick['ly']
-               robot_position, orientation_quat = p.getBasePositionAndOrientation(robot_id)
-
-               # Convert the quaternion to Euler angles
-               roll, pitch, yaw = p.getEulerFromQuaternion(orientation_quat)
-               roll = roll * 180 / 3.14159265359
-               pitch = pitch * 180 / 3.14159265359
-               yaw = yaw * 180 / 3.14159265359
-
-               # print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
-               target_angle = velocity_map(-left_y, 8) - init_angle
-               print(f"error: {target_angle - roll}")
-
-               # Control the wheel velocities using PID control
-               control_signal, prev_error, integral = pid_controller(target_angle, roll, kp, ki, kd, prev_error, integral)
-               steer = steer_map(left_x, 3)
-               set_left_wheel_velocity(control_signal-steer)
-               set_right_wheel_velocity(control_signal+steer)
-
-               # Set the camera to follow the robot
-               p.resetDebugVisualizerCamera(0.75, 30, -40, robot_position)
-
-               p.stepSimulation()
-               time.sleep(0.005)
-
-       print('Connection to joystick lost')
-   except IOError:
-       # No joystick found, wait for a bit before trying again
-       print('Unable to find any joysticks')
-       time.sleep(1.0)
 
 
+try:
+   while True:
+         # Get the key pressed
+         key = stdscr.getch()
 
-p.disconnect()
+         left_x = 0
+         left_y = 0
+         if key == curses.KEY_UP:
+            left_y = 1
+         elif key == curses.KEY_DOWN:
+            left_y = -1
+         if key == curses.KEY_LEFT:
+            left_x = -1
+         elif key == curses.KEY_RIGHT:
+            left_x = 1
+         robot_position, orientation_quat = p.getBasePositionAndOrientation(robot_id)
+
+         # Convert the quaternion to Euler angles
+         roll, _, _ = p.getEulerFromQuaternion(orientation_quat)
+         roll = roll * 180 / 3.14159265359
+
+         # print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
+         target_angle = velocity_map(-left_y, 8) - init_angle
+         # print(f"error: {target_angle - roll}")
+
+         # Control the wheel velocities using PID control
+         control_signal, prev_error, integral = pid_controller(target_angle, roll, kp, ki, kd, prev_error, integral)
+         steer = steer_map(left_x, 10)
+         set_left_wheel_velocity(control_signal-steer)
+         set_right_wheel_velocity(control_signal+steer)
+
+         # Set the camera to follow the robot
+         p.resetDebugVisualizerCamera(0.75, 30, -40, robot_position)
+
+         p.stepSimulation()
+         time.sleep(0.005)
+
+finally:
+    # Clean up and restore terminal settings
+    curses.nocbreak()
+    stdscr.keypad(False)
+    curses.echo()
+    curses.endwin()

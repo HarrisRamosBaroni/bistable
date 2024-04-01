@@ -1,0 +1,1 @@
+curses.KEY_RIGHT
