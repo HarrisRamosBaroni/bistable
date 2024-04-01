@@ -20,7 +20,7 @@ plane_id = p.loadURDF("plane.urdf")
 
 
 # Set gravity
-p.setGravity(0, 0, -9.81) # CHANGE THIS TO NORMAL GRAVITY LATER
+p.setGravity(0, 0, -9.81)
 
 # Find the index of the joints
 num_joints = p.getNumJoints(robot_id)
