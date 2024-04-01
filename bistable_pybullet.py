@@ -7,7 +7,7 @@ from approxeng.input.selectbinder import ControllerResource
 p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-urdf_file = "urdf/BiStable.urdf"
+urdf_file = "BiStable.urdf"
 
 # Check if the URDF file exists before trying to load it
 if os.path.isfile(urdf_file):
